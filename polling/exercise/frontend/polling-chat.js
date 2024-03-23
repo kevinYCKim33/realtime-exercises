@@ -57,7 +57,7 @@ async function getNewMsgs() {
 
   allChat = json.msg;
   render();
-  setTimeout(getNewMsgs, INTERVAL);
+  // setTimeout(getNewMsgs, INTERVAL);
 }
 
 function render() {
@@ -74,4 +74,34 @@ const template = (user, msg) =>
   `<li class="collection-item"><span class="badge">${user}</span>${msg}</li>`;
 
 // make the first request
-getNewMsgs();
+let timeToMakeNextRequest = 0;
+async function rafTimer(time) {
+  // time: represents the last time the frame finished rendering
+  // AKA: this will fire a ton!!!
+  // console.log("time is: ", time);
+  if (timeToMakeNextRequest <= time) {
+    await getNewMsgs();
+    timeToMakeNextRequest = time + INTERVAL;
+  }
+
+  /**
+   * https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame
+   * requestAnimationFrame(callback)
+      callback:
+        The function to call when it's time to update your animation for the next repaint. 
+        This callback function is passed a single argument: a DOMHighResTimeStamp 
+        indicating the end time of the previous frame's rendering 
+        (based on the number of milliseconds since time origin).
+        The timestamp is a decimal number, in milliseconds, but with a 
+        minimal precision of 1 millisecond. 
+   * 
+   */
+  requestAnimationFrame(rafTimer);
+}
+// getNewMsgs();
+
+// why this is better
+// this function won't run when user is not staring at this tab in the browser
+// saves your BE from receiving tons of data
+// saves FE from consuming battery life
+requestAnimationFrame(rafTimer);
