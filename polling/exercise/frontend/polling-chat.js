@@ -6,6 +6,7 @@ let allChat = [];
 
 // the interval to poll at in milliseconds
 const INTERVAL = 3000;
+const BACKOFF_INITIAL = 500;
 
 // a submit listener on the form in the HTML
 chat.addEventListener("submit", function (e) {
@@ -50,14 +51,25 @@ async function getNewMsgs() {
   try {
     const res = await fetch("/poll");
     json = await res.json();
+
+    // lol that's a clean way to handle 400 and 500 errors
+    if (res.status >= 400) {
+      throw new Error("request did not succeed: ", +res.status);
+    }
+
+    allChat = json.msg; // server 500 error would just crash here
+    // Cannot read properties of undefined (readming 'msg')
+    render();
+    failedTries = 0; // reset to 0, cause what if user switches from wifi to LTE, and failedTries gets up to 3
+    // then user switches back to wifi and weird error again? don't want next error to amount from previous error counter
+    // setTimeout(getNewMsgs, INTERVAL);
+    BACKOFF = BACKOFF_INITIAL;
   } catch (e) {
     // backoff code
     console.error("polling error", e);
+    failedTries++; // global variable
+    BACKOFF = BACKOFF * 2; // make exponential
   }
-
-  allChat = json.msg;
-  render();
-  // setTimeout(getNewMsgs, INTERVAL);
 }
 
 function render() {
@@ -73,15 +85,38 @@ function render() {
 const template = (user, msg) =>
   `<li class="collection-item"><span class="badge">${user}</span>${msg}</li>`;
 
+// const BACKOFF = 5000;
+let BACKOFF = BACKOFF_INITIAL;
 // make the first request
 let timeToMakeNextRequest = 0;
+let failedTries = 0;
 async function rafTimer(time) {
   // time: represents the last time the frame finished rendering
   // AKA: this will fire a ton!!!
   // console.log("time is: ", time);
   if (timeToMakeNextRequest <= time) {
+    console.log("timeToMakeNextRequest: ", timeToMakeNextRequest);
     await getNewMsgs();
-    timeToMakeNextRequest = time + INTERVAL;
+    // what if user switches wifi? app just crashes?
+    // what if LTE has a bit of blip?
+    // OBAMA AMA's crashed reddit
+    // Just retrying everything is also bad
+    // try 3s; 6s; 12s; 24s; 48s;
+    // ^ exponential backoff is the answer
+    // linear seconds: 10s, 20s, 30s, ...
+    console.log("i never make it here in a 500 error");
+    // TIL: 2 ** 3 === 8 === Math.pow(2, 3)
+    // 5s, 10s, 15s, 20s, << current
+    // timeToMakeNextRequest = time + INTERVAL + failedTries * BACKOFF;
+    // 5s, 10s, 20s, 40s, << want
+    console.log("BACKOFF IS: ", BACKOFF);
+    timeToMakeNextRequest = time + INTERVAL + (failedTries ? BACKOFF : 0);
+    // ^ way to make exponential; BACKOFF now needs to be a let
+    // general rule of thumb: immediately try again,
+    // try twice more in short intervals
+    // failed 3 times? backoff aggressively to not overload server
+    // axios has built in retry and backoff
+    // https://github.com/softonic/axios-retry
   }
 
   /**

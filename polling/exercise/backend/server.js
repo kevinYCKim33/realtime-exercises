@@ -27,9 +27,8 @@ app.use(express.static("frontend")); // woah, this is kind of insane...
 // just run this, and frontend/index.html will be served
 
 app.get("/poll", function (req, res) {
-  // use getMsgs to get messages to send back
-  // write code here
-  res.json({
+  // simulate random network failure
+  res.status(Math.random() > 0.5 ? 200 : 500).json({
     msg: getMsgs(),
   });
 });
