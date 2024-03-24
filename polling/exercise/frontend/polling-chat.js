@@ -117,6 +117,12 @@ async function rafTimer(time) {
     // failed 3 times? backoff aggressively to not overload server
     // axios has built in retry and backoff
     // https://github.com/softonic/axios-retry
+    // so many dense knowledge in 15m of FEM
+    // (1) 2 ** 3 = 8
+    // (2) exponential backoff
+    // (3) simulate 500's in express
+    // (4) exponential retry logic
+    // (5) axios-retry library existence
   }
 
   /**
