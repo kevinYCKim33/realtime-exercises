@@ -50,6 +50,7 @@ server.on("upgrade", (req, socket) => {
 
   socket.write(headers.join("\r\n")); // done sending you headers now browser!
   // now we can officially talk in websockets now!
+  connections.push(socket);
 
   //     buffer
   // BE <==> FE
@@ -64,7 +65,6 @@ server.on("upgrade", (req, socket) => {
   // FE => BE
   // ws.send(JSON.stringify(data)) // all of it gets converted to <Buffer > and sent to BE
   socket.write(objToResponse({ msg: getMsgs() }));
-  connections.push(socket);
 
   // anytime we receive message from FE, this event listener will fire
   socket.on("data", (buffer) => {
