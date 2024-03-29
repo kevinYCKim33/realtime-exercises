@@ -1,3 +1,4 @@
+// directly manipulate binary being sent to client
 export default function objToResponse(obj) {
   const string = JSON.stringify(obj);
   const stringBytes = Buffer.byteLength(string);
@@ -6,7 +7,7 @@ export default function objToResponse(obj) {
   const payloadLength = lengthByteCount === 0 ? stringBytes : 126;
   const buffer = Buffer.alloc(2 + lengthByteCount + stringBytes);
 
-  buffer.writeUInt8(0b10000001, 0);
+  buffer.writeUInt8(0b10000001, 0); // 0b <== this is binary! 0x <== this is hex!
   buffer.writeUInt8(payloadLength, 1);
 
   let payloadOffset = 2;
