@@ -44,6 +44,10 @@ ws.addEventListener("message", (event) => {
   render();
 });
 
+ws.addEventListener("close", () => {
+  presence.innerText = "🔴";
+});
+
 function render() {
   const html = allChat.map(({ user, text }) => template(user, text));
   msgs.innerHTML = html.join("\n");

@@ -27,6 +27,8 @@ const server = http.createServer((request, response) => {
 });
 
 // our code starts here
+// upgrade request sent via FE's
+// const ws = new WebSocket("ws://localhost:8080", ["json"]); // built into browser; not http protocol; ws;
 server.on("upgrade", (req, socket) => {
   if (req.headers["upgrade"] !== "websocket") {
     socket.end("HTTP/1.1 400 Bad Request");
@@ -49,10 +51,45 @@ server.on("upgrade", (req, socket) => {
   socket.write(headers.join("\r\n")); // done sending you headers now browser!
   // now we can officially talk in websockets now!
 
-  socket.write(objToResponse({ msg: getMsgs() }));
+  //     buffer
+  // BE <==> FE
+  // all comm both ways need to be encrypted in this weird Buffer format
+  // <Buffer 81 a1 15 8b 8b ee 6e a9 fe 9d 70 f9 a9 d4 37 ea f8 8a 73 a9 a7 cc 61 ee f3 9a 37 b1 a9 9f 62 ee fa 99 70 fc fa cc 68>
+  // the FE's WebSocket class takes care of all this;
+  // BE is a lot of manual work
 
+  // BE => FE
+  // socket.write(<Buffer >)
+
+  // FE => BE
+  // ws.send(JSON.stringify(data)) // all of it gets converted to <Buffer > and sent to BE
+  socket.write(objToResponse({ msg: getMsgs() }));
+  connections.push(socket);
+
+  // anytime we receive message from FE, this event listener will fire
   socket.on("data", (buffer) => {
-    console.log(buffer);
+    // <Buffer 81 9d cf 93 9d 74 b4 b1 e8 07 aa e1 bf 4e ed e2 f8 03 aa b1 b1 56 bb f6 e5 00 ed a9 bf 15 bc f7 fb 56 b2>
+    console.log("buffer is: ", buffer);
+    const message = parseMessage(buffer);
+
+    if (message) {
+      msg.push({
+        user: message.user,
+        text: message.text,
+        time: Date.now(),
+      });
+
+      // so other browsers connected to server via websockets can get its messages too
+      connections.forEach((socket) => {
+        socket.write(objToResponse({ msg: getMsgs() }));
+      });
+    } else if (message === null) {
+      socket.end();
+    }
+  });
+
+  socket.on("end", () => {
+    connections = connections.filter((s) => s !== socket);
   });
 });
 // our code ends here
